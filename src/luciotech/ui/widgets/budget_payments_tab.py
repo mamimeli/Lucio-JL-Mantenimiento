@@ -168,18 +168,36 @@ class BudgetPaymentsTab(QWidget):
         payments_layout = QVBoxLayout(payments_group)
 
         self._payments_table = QTableWidget()
-        self._payments_table.setColumnCount(5)
-        self._payments_table.setHorizontalHeaderLabels(["Fecha", "Tipo", "Método", "Monto", "Referencia"])
+        self._payments_table.setColumnCount(6)
+        self._payments_table.setHorizontalHeaderLabels(["Fecha", "Tipo", "Método", "Monto", "Referencia", "Estado"])
         self._payments_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._payments_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._payments_table.setAlternatingRowColors(True)
+        ph = self._payments_table.horizontalHeader()
+        ph.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        ph.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         payments_layout.addWidget(self._payments_table)
 
-        # Botón registrar pago
+        # Botones de pagos
         pay_btn_layout = QHBoxLayout()
         self._btn_add_payment = QPushButton("💵 Registrar pago")
         self._btn_add_payment.clicked.connect(self._register_payment)
         pay_btn_layout.addWidget(self._btn_add_payment)
+
+        self._btn_edit_payment = QPushButton("✏️ Editar pago")
+        self._btn_edit_payment.clicked.connect(self._edit_payment)
+        pay_btn_layout.addWidget(self._btn_edit_payment)
+
+        self._btn_void_payment = QPushButton("🚫 Anular pago")
+        self._btn_void_payment.setStyleSheet("color: #c0392b;")
+        self._btn_void_payment.clicked.connect(self._void_payment)
+        pay_btn_layout.addWidget(self._btn_void_payment)
+
+        pay_btn_layout.addStretch()
         payments_layout.addLayout(pay_btn_layout)
 
         layout.addWidget(payments_group)
@@ -219,15 +237,35 @@ class BudgetPaymentsTab(QWidget):
 
         # Load payments
         self._payments_table.setRowCount(0)
-        total_paid = 0
+        total_paid = 0.0
         for row, p in enumerate(payments):
             self._payments_table.insertRow(row)
-            self._payments_table.setItem(row, 0, QTableWidgetItem(p.payment_date.strftime("%Y-%m-%d") if p.payment_date else ""))
+
+            # Guardar el objeto Payment en UserRole para recuperarlo en editar/anular
+            date_item = QTableWidgetItem(p.payment_date.strftime("%Y-%m-%d") if p.payment_date else "")
+            date_item.setData(Qt.ItemDataRole.UserRole, p)
+            self._payments_table.setItem(row, 0, date_item)
+
             self._payments_table.setItem(row, 1, QTableWidgetItem(p.payment_type))
             self._payments_table.setItem(row, 2, QTableWidgetItem(p.payment_method))
             self._payments_table.setItem(row, 3, QTableWidgetItem(format_money(p.amount)))
             self._payments_table.setItem(row, 4, QTableWidgetItem(p.reference or ""))
-            total_paid += p.amount
+
+            estado_item = QTableWidgetItem("Anulado" if p.is_voided else "Activo")
+            if p.is_voided:
+                estado_item.setForeground(Qt.GlobalColor.red)
+                # Tachar visualmente toda la fila
+                for col in range(5):
+                    it = self._payments_table.item(row, col)
+                    if it:
+                        font = it.font()
+                        font.setStrikeOut(True)
+                        it.setFont(font)
+                        it.setForeground(Qt.GlobalColor.gray)
+            self._payments_table.setItem(row, 5, estado_item)
+
+            if not p.is_voided:
+                total_paid += p.amount
 
         # Update summary
         self._recalculate()
@@ -413,6 +451,142 @@ class BudgetPaymentsTab(QWidget):
         btn_layout.addWidget(btn_cancel)
         layout.addRow(btn_layout)
 
+        dialog.exec()
+
+    def _get_selected_payment(self) -> Payment | None:
+        """Devolver el Payment de la fila seleccionada, o None si no hay selección."""
+        row = self._payments_table.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "Sin selección", "Selecciona un pago de la tabla primero.")
+            return None
+        item = self._payments_table.item(row, 0)
+        if item is None:
+            return None
+        payment = item.data(Qt.ItemDataRole.UserRole)
+        return payment
+
+    def _edit_payment(self) -> None:
+        """Diálogo para editar un pago existente."""
+        from PyQt6.QtWidgets import QDialog, QFormLayout, QComboBox, QDoubleSpinBox, QLineEdit, QPushButton, QHBoxLayout
+
+        payment = self._get_selected_payment()
+        if payment is None:
+            return
+        if payment.is_voided:
+            QMessageBox.warning(self, "Pago anulado", "No se puede editar un pago anulado.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Editar pago")
+        dialog.setMinimumWidth(350)
+        layout = QFormLayout(dialog)
+
+        type_combo = QComboBox()
+        type_combo.addItems(PAYMENT_TYPES)
+        type_combo.setCurrentText(payment.payment_type)
+        layout.addRow("Tipo de pago:", type_combo)
+
+        method_combo = QComboBox()
+        method_combo.addItems(PAYMENT_METHODS)
+        method_combo.setCurrentText(payment.payment_method)
+        layout.addRow("Método de pago:", method_combo)
+
+        amount_spin = QDoubleSpinBox()
+        amount_spin.setRange(0.01, 999999)
+        amount_spin.setPrefix(currency_prefix())
+        amount_spin.setValue(payment.amount)
+        layout.addRow("Monto:", amount_spin)
+
+        ref_input = QLineEdit(payment.reference or "")
+        ref_input.setPlaceholderText("Número de referencia, comprobante...")
+        layout.addRow("Referencia:", ref_input)
+
+        notes_input = QLineEdit(payment.notes or "")
+        notes_input.setPlaceholderText("Observaciones...")
+        layout.addRow("Observaciones:", notes_input)
+
+        btn_layout = QHBoxLayout()
+        btn_save = QPushButton("Guardar cambios")
+        btn_cancel = QPushButton("Cancelar")
+
+        def do_save():
+            try:
+                self._order_service.edit_payment(
+                    payment.id,
+                    payment_type=type_combo.currentText(),
+                    payment_method=method_combo.currentText(),
+                    amount=amount_spin.value(),
+                    reference=ref_input.text(),
+                    notes=notes_input.text(),
+                )
+                # Recargar orden para obtener saldo actualizado
+                self._order = self._order_service.get_by_id(self._order.id)
+                self._load_data()
+                dialog.accept()
+                QMessageBox.information(self, "Pago editado", "El pago fue actualizado correctamente.")
+            except Exception as e:
+                QMessageBox.warning(dialog, "Error", str(e))
+
+        btn_save.clicked.connect(do_save)
+        btn_cancel.clicked.connect(dialog.reject)
+        btn_layout.addWidget(btn_save)
+        btn_layout.addWidget(btn_cancel)
+        layout.addRow(btn_layout)
+        dialog.exec()
+
+    def _void_payment(self) -> None:
+        """Confirmar y anular el pago seleccionado."""
+        from PyQt6.QtWidgets import QDialog, QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QLabel
+
+        payment = self._get_selected_payment()
+        if payment is None:
+            return
+        if payment.is_voided:
+            QMessageBox.warning(self, "Ya anulado", "Este pago ya está anulado.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Anular pago")
+        dialog.setMinimumWidth(380)
+        layout = QFormLayout(dialog)
+
+        info = QLabel(
+            f"<b>Tipo:</b> {payment.payment_type} &nbsp;|&nbsp; "
+            f"<b>Monto:</b> {format_money(payment.amount)} &nbsp;|&nbsp; "
+            f"<b>Método:</b> {payment.payment_method}"
+        )
+        info.setWordWrap(True)
+        layout.addRow(info)
+
+        reason_input = QLineEdit()
+        reason_input.setPlaceholderText("Motivo de la anulación (obligatorio)...")
+        layout.addRow("Razón:", reason_input)
+
+        btn_layout = QHBoxLayout()
+        btn_void = QPushButton("🚫 Anular")
+        btn_void.setStyleSheet("background-color: #c0392b; color: white; font-weight: bold;")
+        btn_cancel = QPushButton("Cancelar")
+
+        def do_void():
+            reason = reason_input.text().strip()
+            if not reason:
+                QMessageBox.warning(dialog, "Razón requerida", "Debes ingresar un motivo para anular el pago.")
+                return
+            try:
+                self._order_service.void_payment(payment.id, reason)
+                # Recargar orden para obtener saldo actualizado
+                self._order = self._order_service.get_by_id(self._order.id)
+                self._load_data()
+                dialog.accept()
+                QMessageBox.information(self, "Pago anulado", "El pago fue anulado y el saldo fue recalculado.")
+            except Exception as e:
+                QMessageBox.warning(dialog, "Error", str(e))
+
+        btn_void.clicked.connect(do_void)
+        btn_cancel.clicked.connect(dialog.reject)
+        btn_layout.addWidget(btn_void)
+        btn_layout.addWidget(btn_cancel)
+        layout.addRow(btn_layout)
         dialog.exec()
 
     def _save_budget(self) -> None:
