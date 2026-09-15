@@ -296,8 +296,11 @@ class BudgetPaymentsTab(QWidget):
     def _set_budget_status(self, new_status: str) -> None:
         """Cambiar el estado del presupuesto.
 
-        Al aprobar, sincroniza automáticamente los costos de la orden a partir
-        de los conceptos guardados y recalcula el saldo pendiente.
+        Al aprobar:
+        1. Persiste los conceptos que están en la tabla UI (igual que Guardar).
+        2. Calcula parts_cost, labor_cost, total y balance.
+        3. Guarda todo en la orden.
+        4. Cambia budget_status y registra el evento en el historial.
         """
         from luciotech.database.repositories import PaymentRepo
 
@@ -305,15 +308,31 @@ class BudgetPaymentsTab(QWidget):
         old_status = getattr(self._order, "budget_status", None) or "Pendiente"
 
         if new_status == "Aprobado":
-            # 1. Leer conceptos persistidos
+            # ── Paso 1: leer filas de la tabla UI y persistirlas ──────────────
             concept_repo = BudgetConceptRepo(session)
-            concepts = concept_repo.get_by_order(self._order.id)
+            concepts = []
+            for row in range(self._concepts_table.rowCount()):
+                type_combo = self._concepts_table.cellWidget(row, 0)
+                desc_item  = self._concepts_table.item(row, 1)
+                qty_spin   = self._concepts_table.cellWidget(row, 2)
+                price_spin = self._concepts_table.cellWidget(row, 3)
+                if not (type_combo and qty_spin and price_spin):
+                    continue
+                qty        = qty_spin.value()
+                unit_price = price_spin.value()
+                subtotal   = qty * unit_price
+                concepts.append(BudgetConcept(
+                    order_id     = self._order.id,
+                    concept_type = type_combo.currentText(),
+                    description  = desc_item.text().strip() if desc_item else "",
+                    quantity     = qty,
+                    unit_price   = unit_price,
+                    subtotal     = subtotal,
+                ))
+            concept_repo.replace_for_order(self._order.id, concepts)
 
-            # 2. Sumar subtotales por tipo
-            parts_cost = self._spn_parts.value()
-            labor_cost = self._spn_labor.value()
-
-            # Si hay conceptos detallados, recalcular parts/labor desde ellos
+            # ── Paso 2: calcular totales ──────────────────────────────────────
+            # Si hay conceptos detallados, desglosar por tipo; si no, usar spinners.
             if concepts:
                 parts_cost = sum(
                     c.subtotal for c in concepts
@@ -323,53 +342,62 @@ class BudgetPaymentsTab(QWidget):
                     c.subtotal for c in concepts
                     if c.concept_type in ("Mano de obra", "Diagnóstico", "Servicio", "Otro")
                 )
+            else:
+                parts_cost = self._spn_parts.value()
+                labor_cost = self._spn_labor.value()
 
-            total = parts_cost + labor_cost
-
-            # 3. Recalcular saldo descontando pagos activos
+            total      = parts_cost + labor_cost
             total_paid = PaymentRepo(session).get_total_paid(self._order.id)
-            balance = total - total_paid
+            balance    = total - total_paid
 
-            # 4. Persistir en la orden
-            self._order.parts_cost = parts_cost
-            self._order.labor_cost = labor_cost
-            self._order.total = total
-            self._order.balance = balance
+            # ── Paso 3: persistir en la orden ─────────────────────────────────
+            self._order.parts_cost    = parts_cost
+            self._order.labor_cost    = labor_cost
+            self._order.discount      = 0.0
+            self._order.tax           = 0.0
+            self._order.total         = total
+            self._order.advance_payment = self._order.advance_payment or 0.0
+            self._order.balance       = balance
 
-            # 5. Refrescar spinners y etiquetas en la UI
+            # ── Paso 4: actualizar UI inmediatamente ──────────────────────────
             self._spn_parts.blockSignals(True)
             self._spn_labor.blockSignals(True)
             self._spn_parts.setValue(parts_cost)
             self._spn_labor.setValue(labor_cost)
             self._spn_parts.blockSignals(False)
             self._spn_labor.blockSignals(False)
+            self._lbl_subtotal.setText(format_money(sum(c.subtotal for c in concepts)))
             self._lbl_total.setText(format_money(total))
+            self._lbl_advance.setText(format_money(self._order.advance_payment))
             self._lbl_paid.setText(format_money(total_paid))
             self._lbl_balance.setText(format_money(balance))
 
             logger.info(
                 "Presupuesto aprobado para orden %s: repuestos=%.2f, "
-                "reparación=%.2f, total=%.2f, saldo=%.2f",
-                self._order.order_number, parts_cost, labor_cost, total, balance,
+                "reparación=%.2f, total=%.2f, pagado=%.2f, saldo=%.2f",
+                self._order.order_number, parts_cost, labor_cost,
+                total, total_paid, balance,
             )
 
+        # ── Paso 5: cambiar estado y persistir ───────────────────────────────
         self._order.budget_status = new_status
         self._order_service.order_repo.update(self._order)
 
-        event_type = "Presupuesto aprobado" if new_status == "Aprobado" else "Presupuesto rechazado"
-        title = f"Presupuesto {new_status.lower()}"
-        extra = (
+        event_type  = "Presupuesto aprobado" if new_status == "Aprobado" else "Presupuesto rechazado"
+        title       = f"Presupuesto {new_status.lower()}"
+        extra       = (
             f" Total: {format_money(self._order.total)}, "
             f"Saldo: {format_money(self._order.balance)}."
             if new_status == "Aprobado" else ""
         )
-        description = (
-            f"Estado del presupuesto cambiado de '{old_status}' a '{new_status}'.{extra}"
-        )
+        description = f"Estado del presupuesto cambiado de '{old_status}' a '{new_status}'.{extra}"
         self._order_service.add_event(self._order, event_type, title, description)
 
         self._update_budget_status_display()
-        logger.info("Presupuesto de orden %s: %s → %s", self._order.order_number, old_status, new_status)
+        logger.info(
+            "Presupuesto de orden %s: %s → %s",
+            self._order.order_number, old_status, new_status,
+        )
 
     def _approve_budget(self) -> None:
         """Aprobar el presupuesto de la orden."""
