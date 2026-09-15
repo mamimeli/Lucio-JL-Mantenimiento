@@ -113,49 +113,52 @@ O usa el lanzador incluido, que configura las variables de compatibilidad de Qt:
 ./run.sh
 ```
 
-### Windows — Guía de desarrollo
+### Windows — Guía paso a paso
 
-Sección orientada a desarrolladores que quieran **instalar y ejecutar el
-proyecto desde cero** en Windows 10/11. Presupone que ya tienes Python (3.11+)
-instalado y añadido al `PATH`.
+Esta sección explica cómo instalar y ejecutar el programa en Windows 10/11
+**desde cero**. Solo necesitas tener Python (3.11+) instalado y añadido al
+`PATH`. No se necesita experiencia previa.
 
-#### 1. Crear el entorno virtual (solo la primera vez)
+---
 
-Desde la carpeta del proyecto:
+#### Paso 1 — Crear el entorno virtual *(solo la primera vez)*
+
+Abre una terminal (CMD o PowerShell) dentro de la carpeta del proyecto y ejecuta:
 
 ```bat
 python -m venv venv
 ```
 
-Esto crea una carpeta `venv\` aislada que contiene el intérprete y los paquetes.
-Solo hay que ejecutarlo **una sola vez por proyecto**.
+> Esto crea una carpeta `venv\` que contiene una copia aislada de Python
+> exclusiva para este proyecto. **Solo hay que hacerlo una vez.** La próxima vez
+> que quieras usar el programa, ve directo al Paso 2.
 
-#### 2. Permitir scripts de PowerShell durante esta sesión
+---
 
-Si PowerShell informa que la ejecución de scripts está deshabilitada, ejecuta
-este comando por separado:
+#### Paso 2 — Activar el entorno virtual *(cada vez que abras la terminal)*
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```bat
+venv\Scripts\activate
 ```
 
-Este cambio solo dura mientras la ventana actual de PowerShell permanezca
-abierta.
+Sabrás que el entorno está activo porque el prompt de la terminal cambiará y
+aparecerá `(venv)` al inicio. Por ejemplo:
 
-#### 3. Activar el entorno virtual
-
-Después de permitir los scripts, ejecuta este comando por separado:
-
-```powershell
-.\venv\Scripts\Activate.ps1
+```
+(venv) C:\gh\Lucio-JL-Mantenimiento>
 ```
 
-Notarás que el prompt de la terminal cambia y aparece `(venv)`. Todo lo que
-instales o ejecutes a partir de aquí usa el Python de `venv`.
+> Si PowerShell muestra un error sobre ejecución de scripts, ejecuta primero
+> este comando y luego repite el de arriba:
+> ```powershell
+> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+> ```
 
-#### 4. Instalar todas las dependencias
+---
 
-Con el entorno activado:
+#### Paso 3 — Instalar las dependencias *(solo la primera vez, con el entorno activo)*
+
+Con el entorno activado, instala todos los paquetes necesarios:
 
 ```bat
 pip install --upgrade pip
@@ -175,45 +178,68 @@ pip install -r requirements.txt
 | `reportlab` | Generación de PDF |
 | `matplotlib` | Gráficas y reportes |
 
-Para poder ejecutar la **suite de pruebas** (`pytest`), instala además las
-dependencias de desarrollo:
+> **Solo hay que instalar las dependencias una vez.** A partir de la segunda
+> sesión, con activar el entorno (Paso 2) ya es suficiente.
 
-```bat
-pip install pytest pytest-qt
-```
+---
 
-> Puedes instalar todo de una vez con `pip install -r requirements.txt pytest pytest-qt`.
+#### Paso 4 — Lanzar el programa
 
-#### 4. Lanzar el programa
+Con el entorno activo, ejecuta:
 
 ```bat
 python main.py
 ```
 
-#### 5. Desactivar el entorno virtual
+El programa abrirá su ventana principal. 🎉
 
-Cuando termines de trabajar, devuelve la terminal a la normalidad:
+> Si prefieres no escribir comandos cada vez, puedes usar el lanzador incluido
+> (`iniciar.bat`): activa el entorno y arranca la aplicación con solo hacer
+> doble clic en el archivo.
+
+---
+
+#### Paso 5 — Cerrar el programa y desactivar el entorno
+
+Cuando termines de trabajar y hayas cerrado el programa, escribe en la terminal:
 
 ```bat
 deactivate
 ```
 
-> **💡 Importante:** no hace falta crear el `venv` de nuevo en cada sesión. Una
-> vez creado e instaladas las dependencias, para lanzar el programa solo tienes
-> que activar el entorno y ejecutar `python main.py`:
+El prompt volverá a la normalidad (desaparece el `(venv)`). Ya puedes cerrar la
+terminal.
+
+---
+
+#### Resumen: uso del día a día
+
+Una vez completada la instalación inicial (pasos 1, 2 y 3), la rutina para
+lanzar el programa se reduce a estos tres pasos:
 
 ```bat
-cd C:\D\Lucio-JL-Mantenimiento
+cd C:\gh\Lucio-JL-Mantenimiento
 venv\Scripts\activate
 python main.py
 ```
 
-Si prefieres no activar el entorno manualmente, puedes usar el lanzador incluido
-(`iniciar.bat`), que activa el entorno y arranca la aplicación con doble clic.
+Y al terminar:
 
-#### Ejecutar las pruebas
+```bat
+deactivate
+```
 
-Con el entorno activado:
+---
+
+#### Ejecutar las pruebas *(opcional, para desarrolladores)*
+
+Con el entorno activado, instala primero las dependencias de prueba:
+
+```bat
+pip install pytest pytest-qt
+```
+
+Luego ejecuta la suite:
 
 ```bat
 $env:PYTHONDONTWRITEBYTECODE="1"
