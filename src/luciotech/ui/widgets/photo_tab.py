@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QPixmap, QMovie, QDragEnterEvent, QDragMoveEvent, QDropEvent
+from PyQt6.QtGui import QPixmap, QMovie, QDragEnterEvent, QDragMoveEvent, QDropEvent, QIcon
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -203,7 +203,7 @@ class PhotoTab(QWidget):
             thumb_path = self._photo_service.image_service.get_thumbnail_path(photo.file_path)
             if thumb_path:
                 pixmap = QPixmap(thumb_path)
-                item.setIcon(pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                item.setIcon(QIcon(pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)))
 
             item.setText(f"{photo.photo_type}\n{photo.description or ''}")
             self._list.addItem(item)
