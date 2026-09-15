@@ -75,11 +75,22 @@ class PhotoListWidget(QListWidget):
             and Path(url.toLocalFile()).suffix.lower() in _IMAGE_EXTENSIONS
         ]
 
-        if paths and isinstance(self.window(), PhotoTab):
-            self.window()._import_photos(paths)
-            event.acceptProposedAction()
-        else:
-            super().dropEvent(event)
+        # Buscar el PhotoTab padre recorriendo la jerarquía de widgets
+        # (no se puede usar self.window() porque el widget vive dentro de un
+        # QSplitter → QGroupBox → PhotoTab, no directamente en la ventana).
+        if paths:
+            parent = self.parent()
+            photo_tab = None
+            while parent is not None:
+                if isinstance(parent, PhotoTab):
+                    photo_tab = parent
+                    break
+                parent = parent.parent() if hasattr(parent, "parent") else None
+            if photo_tab is not None:
+                photo_tab._import_photos(paths)
+                event.acceptProposedAction()
+                return
+        super().dropEvent(event)
 
 
 class PhotoTab(QWidget):
@@ -378,7 +389,7 @@ class PhotoTab(QWidget):
             return
         photo: Photo = current.data(Qt.ItemDataRole.UserRole)
         photo.photo_type = text
-        self._photo_service.session.commit()
+        self._photo_service.repo.update(photo)
         current.setText(f"{photo.photo_type}\n{photo.description or ''}")
 
     def _on_desc_changed(self, text: str) -> None:
@@ -387,5 +398,5 @@ class PhotoTab(QWidget):
             return
         photo: Photo = current.data(Qt.ItemDataRole.UserRole)
         photo.description = text.strip() or None
-        self._photo_service.session.commit()
+        self._photo_service.repo.update(photo)
         current.setText(f"{photo.photo_type}\n{photo.description or ''}")

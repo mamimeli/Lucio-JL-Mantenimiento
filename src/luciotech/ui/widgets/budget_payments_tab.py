@@ -192,10 +192,9 @@ class BudgetPaymentsTab(QWidget):
     def _load_data(self) -> None:
         """Cargar conceptos y pagos."""
         from luciotech.database.repositories import PaymentRepo
-        from luciotech.database.connection import get_session
-        from luciotech.services.settings_service import SettingsService
 
-        session = get_session()
+        # Reusar la sesión del order_service para evitar DetachedInstanceError
+        session = self._order_service.session
         pay_repo = PaymentRepo(session)
         payments = pay_repo.get_by_order(self._order.id)
 
@@ -255,12 +254,9 @@ class BudgetPaymentsTab(QWidget):
 
     def _set_budget_status(self, new_status: str) -> None:
         """Cambiar el estado del presupuesto y crear evento de historial."""
-        from luciotech.database.connection import get_session
-
         old_status = getattr(self._order, "budget_status", None) or "Pendiente"
         self._order.budget_status = new_status
 
-        session = get_session()
         self._order_service.order_repo.update(self._order)
 
         event_type = "Presupuesto aprobado" if new_status == "Aprobado" else "Presupuesto rechazado"
@@ -418,10 +414,11 @@ class BudgetPaymentsTab(QWidget):
 
     def _save_budget(self) -> None:
         """Guardar presupuesto calculado con conceptos persistentes."""
-        from luciotech.database.connection import get_session
         from luciotech.database.repositories import PaymentRepo
 
-        session = get_session()
+        # Usar siempre la misma sesión que order_repo para evitar
+        # DetachedInstanceError al guardar el objeto order
+        session = self._order_service.session
         concept_repo = BudgetConceptRepo(session)
 
         concepts = []
