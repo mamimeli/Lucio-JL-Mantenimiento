@@ -353,7 +353,7 @@ class OrderViewDialog(QDialog):
 
         # Set up budget tab (created once, refreshed afterwards)
         if self._budget_tab is None:
-            budget_tab = BudgetPaymentsTab(self._order, self)
+            budget_tab = BudgetPaymentsTab(self._order, self, order_service=self._order_service)
             idx = self._tabs.indexOf(self._budget_placeholder)
             self._tabs.removeTab(idx)
             self._tabs.insertTab(idx, budget_tab, "Presupuesto y Pagos")

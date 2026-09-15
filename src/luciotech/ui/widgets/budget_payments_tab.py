@@ -46,10 +46,13 @@ def _parse_money(text: str) -> float:
 class BudgetPaymentsTab(QWidget):
     """Pestaña de presupuesto y pagos."""
 
-    def __init__(self, order: ServiceOrder, parent: QWidget | None = None) -> None:
+    def __init__(self, order: ServiceOrder, parent: QWidget | None = None, order_service: OrderService | None = None) -> None:
         super().__init__(parent)
         self._order = order
-        self._order_service = OrderService()
+        # Reusar el OrderService del diálogo padre si se proporciona, para que
+        # el objeto order y las operaciones de persistencia compartan la misma
+        # sesión SQLAlchemy y evitar "Instance is not persistent within this Session".
+        self._order_service = order_service if order_service is not None else OrderService()
         self._init_ui()
         self._load_data()
 
