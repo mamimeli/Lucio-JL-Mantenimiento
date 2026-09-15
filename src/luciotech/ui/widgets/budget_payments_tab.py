@@ -22,6 +22,8 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QMessageBox,
     QDateEdit,
+    QSizePolicy,
+    QScrollArea,
 )
 
 from luciotech.database.models import ServiceOrder, Payment, BudgetConcept
@@ -62,7 +64,21 @@ class BudgetPaymentsTab(QWidget):
         self._load_data()
 
     def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        # Scroll area para que todo el contenido sea accesible
+        # aunque la ventana sea pequeña
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
+        inner_widget = QWidget()
+        layout = QVBoxLayout(inner_widget)
+        layout.setContentsMargins(8, 8, 8, 8)
+        scroll.setWidget(inner_widget)
+        outer.addWidget(scroll)
+
         prefix = currency_prefix()
 
         # Sección: Conceptos de presupuesto
@@ -75,6 +91,8 @@ class BudgetPaymentsTab(QWidget):
         self._concepts_table.setHorizontalHeaderLabels(["Tipo", "Descripción", "Cantidad", "Precio unit.", "Subtotal"])
         self._concepts_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._concepts_table.setAlternatingRowColors(True)
+        self._concepts_table.setMinimumHeight(180)
+        self._concepts_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         header = self._concepts_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -173,6 +191,8 @@ class BudgetPaymentsTab(QWidget):
         self._payments_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._payments_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._payments_table.setAlternatingRowColors(True)
+        self._payments_table.setMinimumHeight(150)
+        self._payments_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         ph = self._payments_table.horizontalHeader()
         ph.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         ph.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)

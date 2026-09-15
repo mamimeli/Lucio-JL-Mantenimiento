@@ -52,7 +52,8 @@ class OrderViewDialog(QDialog):
 
     def _init_ui(self) -> None:
         self.setWindowTitle("Orden de servicio")
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(1000, 700)
+        self.resize(1200, 800)
 
         layout = QVBoxLayout(self)
 
