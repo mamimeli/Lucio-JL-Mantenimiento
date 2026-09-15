@@ -294,15 +294,78 @@ class BudgetPaymentsTab(QWidget):
         self._btn_reject_budget.setEnabled(can_reject)
 
     def _set_budget_status(self, new_status: str) -> None:
-        """Cambiar el estado del presupuesto y crear evento de historial."""
-        old_status = getattr(self._order, "budget_status", None) or "Pendiente"
-        self._order.budget_status = new_status
+        """Cambiar el estado del presupuesto.
 
+        Al aprobar, sincroniza automáticamente los costos de la orden a partir
+        de los conceptos guardados y recalcula el saldo pendiente.
+        """
+        from luciotech.database.repositories import PaymentRepo
+
+        session = self._order_service.session
+        old_status = getattr(self._order, "budget_status", None) or "Pendiente"
+
+        if new_status == "Aprobado":
+            # 1. Leer conceptos persistidos
+            concept_repo = BudgetConceptRepo(session)
+            concepts = concept_repo.get_by_order(self._order.id)
+
+            # 2. Sumar subtotales por tipo
+            parts_cost = self._spn_parts.value()
+            labor_cost = self._spn_labor.value()
+
+            # Si hay conceptos detallados, recalcular parts/labor desde ellos
+            if concepts:
+                parts_cost = sum(
+                    c.subtotal for c in concepts
+                    if c.concept_type in ("Repuesto", "Accesorio")
+                )
+                labor_cost = sum(
+                    c.subtotal for c in concepts
+                    if c.concept_type in ("Mano de obra", "Diagnóstico", "Servicio", "Otro")
+                )
+
+            total = parts_cost + labor_cost
+
+            # 3. Recalcular saldo descontando pagos activos
+            total_paid = PaymentRepo(session).get_total_paid(self._order.id)
+            balance = total - total_paid
+
+            # 4. Persistir en la orden
+            self._order.parts_cost = parts_cost
+            self._order.labor_cost = labor_cost
+            self._order.total = total
+            self._order.balance = balance
+
+            # 5. Refrescar spinners y etiquetas en la UI
+            self._spn_parts.blockSignals(True)
+            self._spn_labor.blockSignals(True)
+            self._spn_parts.setValue(parts_cost)
+            self._spn_labor.setValue(labor_cost)
+            self._spn_parts.blockSignals(False)
+            self._spn_labor.blockSignals(False)
+            self._lbl_total.setText(format_money(total))
+            self._lbl_paid.setText(format_money(total_paid))
+            self._lbl_balance.setText(format_money(balance))
+
+            logger.info(
+                "Presupuesto aprobado para orden %s: repuestos=%.2f, "
+                "reparación=%.2f, total=%.2f, saldo=%.2f",
+                self._order.order_number, parts_cost, labor_cost, total, balance,
+            )
+
+        self._order.budget_status = new_status
         self._order_service.order_repo.update(self._order)
 
         event_type = "Presupuesto aprobado" if new_status == "Aprobado" else "Presupuesto rechazado"
         title = f"Presupuesto {new_status.lower()}"
-        description = f"Estado del presupuesto cambiado de '{old_status}' a '{new_status}'."
+        extra = (
+            f" Total: {format_money(self._order.total)}, "
+            f"Saldo: {format_money(self._order.balance)}."
+            if new_status == "Aprobado" else ""
+        )
+        description = (
+            f"Estado del presupuesto cambiado de '{old_status}' a '{new_status}'.{extra}"
+        )
         self._order_service.add_event(self._order, event_type, title, description)
 
         self._update_budget_status_display()
