@@ -216,6 +216,10 @@ class MainWindow(QMainWindow):
         self._splitter: QSplitter | None = None
         self._init_ui()
         self._restore_state()
+        if self._sidebar and self._sidebar.get_list() and self._sidebar.get_list().currentRow() < 0:
+            # Primera ejecución (sin window_state.json): el stack muestra Inicio
+            # pero la barra no marca ninguna sección hasta que el usuario hace clic.
+            self._go_to_section(Sidebar.SECTION_HOME)
         logger.info("Ventana principal creada")
 
     @staticmethod

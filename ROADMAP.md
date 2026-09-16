@@ -80,6 +80,8 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
 - [x] Resumen por estado.
 - [x] Diez órdenes recientes con apertura por doble clic.
 - [x] Accesos a nueva recepción y lista de órdenes.
+- [x] Primera ejecución: Inicio queda marcado en la barra lateral aunque no
+  exista `window_state.json`, y el panel muestra una guía cuando no hay órdenes.
 - [x] Actualización al volver a Inicio.
 - [x] Equipos recibidos hoy como indicador independiente.
 - [x] Equipos entregados durante el mes.
@@ -393,7 +395,7 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
 - [x] Aislamiento de la base SQLite entre pruebas.
 - [x] `reset_connection()` cierra todas las sesiones vivas antes de disponer del
   motor, evitando que Windows retenga el archivo SQLite bloqueado (WinError 32).
-- [x] Ejecución actual: `69 passed` con `PYTHONPATH=src pytest -q` en Windows.
+- [x] Ejecución actual: `78 passed` con `PYTHONPATH=src pytest -q` en Windows.
 - [x] `.gitignore` para cachés, entornos, builds y logs.
 - [ ] Pruebas de validaciones de duplicados y formatos configurables.
 - [x] Pruebas de papelera, restauración e historial global (cubiertas en `test_p0_features.py`).
