@@ -447,6 +447,13 @@ class PhotoRepo:
         self.session.delete(photo)
         self.session.commit()
 
+    def update(self, photo: Photo) -> Photo:
+        """Persistir cambios en una foto existente."""
+        self.session.add(photo)
+        self.session.commit()
+        self.session.refresh(photo)
+        return photo
+
     def reorder(self, photos: list[tuple[int, int]]) -> None:
         """Reordenar fotos. Lista de (photo_id, sort_order)."""
         for photo_id, sort_order in photos:

@@ -118,9 +118,10 @@ class HomePage(QWidget):
         recent_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         recent_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         recent_layout.addWidget(self._recent_table)
-        hint = QLabel("Doble clic sobre una fila para abrir la orden")
-        hint.setStyleSheet("color: palette(mid); font-size: 11px;")
-        recent_layout.addWidget(hint)
+        self._recent_hint = QLabel("Doble clic sobre una fila para abrir la orden")
+        self._recent_hint.setWordWrap(True)
+        self._recent_hint.setStyleSheet("color: palette(mid); font-size: 11px;")
+        recent_layout.addWidget(self._recent_hint)
         content.addWidget(recent_frame, 3)
 
         layout.addLayout(content, 1)
@@ -207,6 +208,13 @@ class HomePage(QWidget):
 
         self._populate_statuses(orders)
         self._populate_recent(orders[:10])
+        if orders:
+            self._recent_hint.setText("Doble clic sobre una fila para abrir la orden")
+        else:
+            self._recent_hint.setText(
+                "Todavía no hay órdenes. Pulsa «Nueva recepción» para registrar "
+                "el primer equipo del taller."
+            )
         self._updated_label.setText(f"Actualizado: {now:%Y-%m-%d %H:%M:%S}")
 
     def _populate_statuses(self, orders: list[ServiceOrder]) -> None:
