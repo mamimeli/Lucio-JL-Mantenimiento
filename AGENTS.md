@@ -71,7 +71,7 @@ mantuvo abierta hasta que `timeout` la detuvo.
 
 ## Estado de verificación
 
-- Suite actual: **69 passed** en Windows (`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src pytest -q`).
+- Suite actual: **78 passed** en Windows (`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src pytest -q`).
 - `reset_connection()` cierra todas las sesiones antes de disponer el motor, lo
   que evita `WinError 32` al limpiar directorios temporales SQLite en Windows.
 - Arranque offscreen validado en iteraciones recientes.
@@ -92,6 +92,10 @@ mantuvo abierta hasta que `timeout` la detuvo.
    nuevos.
 5. Varias pantallas mantienen sesiones SQLAlchemy durante toda su vida; vigilar
    datos obsoletos y liberar recursos.
+6. La recepción no es atómica de punta a punta: los repositorios hacen commit por
+   operación, así que si falla la creación de la orden, el cliente y el equipo ya
+   quedaron guardados; el rollback de `_save_reception` solo restaura datos en
+   memoria (verificado en runtime 2026-09-16).
 
 ## Flujo recomendado para cada cambio
 

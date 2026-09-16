@@ -80,6 +80,8 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
 - [x] Resumen por estado.
 - [x] Diez órdenes recientes con apertura por doble clic.
 - [x] Accesos a nueva recepción y lista de órdenes.
+- [x] Primera ejecución: Inicio queda marcado en la barra lateral aunque no
+  exista `window_state.json`, y el panel muestra una guía cuando no hay órdenes.
 - [x] Actualización al volver a Inicio.
 - [x] Equipos recibidos hoy como indicador independiente.
 - [x] Equipos entregados durante el mes.
@@ -129,7 +131,9 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
 - [x] Capturar contraseña/PIN como campo oculto.
 - [x] Capturar accesorios, estado físico, problema y observaciones.
 - [x] Capturar fecha/hora de ingreso y fecha estimada.
-- [x] Capturar prioridad, técnico, costo de diagnóstico, anticipo y estado inicial.
+- [x] Capturar prioridad, técnico, anticipo y estado inicial.
+- [ ] Capturar costo de diagnóstico en recepción (el modelo `ServiceOrder.diagnostic_cost` y el servicio lo soportan, pero el formulario no tiene el campo).
+- [ ] Elegir método de pago del anticipo en la recepción (hoy se registra siempre como "Efectivo").
 - [x] Usar técnico y garantía predeterminados desde Configuración.
 - [x] Crear cliente, equipo, orden, pago inicial e historial.
 - [x] Validar que la fecha estimada no sea anterior al ingreso.
@@ -138,8 +142,11 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
   (selección de archivos o carpeta completa, importación automática tras crear la orden).
 - [x] Pantalla de confirmación previa con resumen y número que se generará.
 - [ ] Variantes de campos/accesorios más completas por tipo de equipo.
-- [x] Transacción atómica: revertir cliente/equipo si falla la creación final
-  (snapshot de datos + rollback de sesiones en `_save_reception`).
+- [x] Snapshot de datos del cliente en memoria para restaurarlos si falla la creación.
+- [ ] Transacción atómica real: los repositorios hacen commit por operación, por
+  lo que el rollback de `_save_reception` NO revierte cliente/equipo ya guardados
+  si falla la orden (verificado en runtime 2026-09-16). Se requiere sesión
+  compartida o una acción compensatoria.
 
 ## 8. Órdenes de servicio
 
@@ -393,7 +400,7 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
 - [x] Aislamiento de la base SQLite entre pruebas.
 - [x] `reset_connection()` cierra todas las sesiones vivas antes de disponer del
   motor, evitando que Windows retenga el archivo SQLite bloqueado (WinError 32).
-- [x] Ejecución actual: `69 passed` con `PYTHONPATH=src pytest -q` en Windows.
+- [x] Ejecución actual: `78 passed` con `PYTHONPATH=src pytest -q` en Windows.
 - [x] `.gitignore` para cachés, entornos, builds y logs.
 - [ ] Pruebas de validaciones de duplicados y formatos configurables.
 - [x] Pruebas de papelera, restauración e historial global (cubiertas en `test_p0_features.py`).

@@ -52,7 +52,8 @@ class OrderViewDialog(QDialog):
 
     def _init_ui(self) -> None:
         self.setWindowTitle("Orden de servicio")
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(1000, 750)
+        self.resize(1200, 920)
 
         layout = QVBoxLayout(self)
 
@@ -353,7 +354,7 @@ class OrderViewDialog(QDialog):
 
         # Set up budget tab (created once, refreshed afterwards)
         if self._budget_tab is None:
-            budget_tab = BudgetPaymentsTab(self._order, self)
+            budget_tab = BudgetPaymentsTab(self._order, self, order_service=self._order_service)
             idx = self._tabs.indexOf(self._budget_placeholder)
             self._tabs.removeTab(idx)
             self._tabs.insertTab(idx, budget_tab, "Presupuesto y Pagos")
