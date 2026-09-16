@@ -92,6 +92,10 @@ mantuvo abierta hasta que `timeout` la detuvo.
    nuevos.
 5. Varias pantallas mantienen sesiones SQLAlchemy durante toda su vida; vigilar
    datos obsoletos y liberar recursos.
+6. La recepción no es atómica de punta a punta: los repositorios hacen commit por
+   operación, así que si falla la creación de la orden, el cliente y el equipo ya
+   quedaron guardados; el rollback de `_save_reception` solo restaura datos en
+   memoria (verificado en runtime 2026-09-16).
 
 ## Flujo recomendado para cada cambio
 

@@ -131,7 +131,9 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
 - [x] Capturar contraseña/PIN como campo oculto.
 - [x] Capturar accesorios, estado físico, problema y observaciones.
 - [x] Capturar fecha/hora de ingreso y fecha estimada.
-- [x] Capturar prioridad, técnico, costo de diagnóstico, anticipo y estado inicial.
+- [x] Capturar prioridad, técnico, anticipo y estado inicial.
+- [ ] Capturar costo de diagnóstico en recepción (el modelo `ServiceOrder.diagnostic_cost` y el servicio lo soportan, pero el formulario no tiene el campo).
+- [ ] Elegir método de pago del anticipo en la recepción (hoy se registra siempre como "Efectivo").
 - [x] Usar técnico y garantía predeterminados desde Configuración.
 - [x] Crear cliente, equipo, orden, pago inicial e historial.
 - [x] Validar que la fecha estimada no sea anterior al ingreso.
@@ -140,8 +142,11 @@ desmarcadas. No se considera terminada solo porque exista una pantalla o clase.
   (selección de archivos o carpeta completa, importación automática tras crear la orden).
 - [x] Pantalla de confirmación previa con resumen y número que se generará.
 - [ ] Variantes de campos/accesorios más completas por tipo de equipo.
-- [x] Transacción atómica: revertir cliente/equipo si falla la creación final
-  (snapshot de datos + rollback de sesiones en `_save_reception`).
+- [x] Snapshot de datos del cliente en memoria para restaurarlos si falla la creación.
+- [ ] Transacción atómica real: los repositorios hacen commit por operación, por
+  lo que el rollback de `_save_reception` NO revierte cliente/equipo ya guardados
+  si falla la orden (verificado en runtime 2026-09-16). Se requiere sesión
+  compartida o una acción compensatoria.
 
 ## 8. Órdenes de servicio
 
